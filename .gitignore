@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+storage/users/
+storage/contacts/
+storage/messages/
+storage/trust/
+storage/certificates/
+storage/metadata/

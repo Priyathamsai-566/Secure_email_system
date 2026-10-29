@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Secure Email System</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <section id="login-screen" class="login-screen">
+    <form id="login-form" class="login-card">
+      <div class="login-heading">
+        <p class="eyebrow">SECURE EMAIL</p>
+        <h1>Secure Email System</h1>
+        <p class="login-subtitle">Sign in to continue.</p>
+      </div>
+
+      <div class="login-fields">
+        <label for="login-username">Username</label>
+        <input
+          id="login-username"
+          name="username"
+          type="text"
+          autocomplete="username"
+          placeholder="Enter your username"
+          required
+        >
+
+        <label for="login-password">Password</label>
+        <input
+          id="login-password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          placeholder="Enter your password"
+          required
+        >
+      </div>
+
+      <p id="login-error" class="login-error" role="alert" aria-live="polite" hidden></p>
+
+      <button id="login-button" class="button primary login-button" type="submit">
+        Log in
+      </button>
+    </form>
+  </section>
+
+  <div id="app-shell" hidden>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">SECURE EMAIL</p>
+        <h1>Secure Email System</h1>
+      </div>
+      <div class="session-controls">
+        <span>Signed in as <strong id="signed-in-user"></strong></span>
+        <button id="logout-button" class="button secondary" type="button">Log out</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <nav class="sidebar" aria-label="Main navigation">
+        <button class="nav-button active" data-view="dashboard">Dashboard</button>
+        <button class="nav-button" data-view="compose">Compose email</button>
+        <button class="nav-button" data-view="inbox">Inbox</button>
+        <button class="nav-button" data-view="keys">Key management</button>
+        <button class="nav-button" data-view="contacts">Contacts and trust</button>
+        <button class="nav-button" data-view="ca">Certificate authority</button>
+        <button class="nav-button" data-view="lab">Security lab</button>
+        <button class="nav-button" data-view="about">About and security</button>
+      </nav>
+
+      <main>
+        <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+
+        <section class="view active" id="view-dashboard">
+          <div class="page-heading">
+            <p class="eyebrow">YOUR SECURE MAIL</p>
+            <h2>Dashboard</h2>
+            <p>View your key status and inbox.</p>
+          </div>
+          <div class="card-grid">
+            <article class="card">
+              <h3>Signed-in user</h3>
+              <p id="dashboard-user" class="large-value"></p>
+              <p>Use Log out to switch accounts.</p>
+            </article>
+            <article class="card">
+              <h3>Public-key fingerprint</h3>
+              <p id="dashboard-fingerprint" class="fingerprint">Not generated</p>
+              <button id="refresh-dashboard" class="button secondary" type="button">
+                Refresh status
+              </button>
+            </article>
+            <article class="card">
+              <h3>Inbox</h3>
+              <p id="dashboard-inbox-count" class="large-value">0</p>
+              <p>Messages are stored as encrypted packages.</p>
+            </article>
+          </div>
+          <article class="card">
+            <h3>Message flow</h3>
+            <ol>
+              <li>A fresh AES-256 key encrypts each message with AES-GCM.</li>
+              <li>RSA-OAEP wraps the AES key for the recipient.</li>
+              <li>The sender signs the encrypted package with RSA-PSS.</li>
+              <li>The recipient verifies the signature, then chooses to decrypt.</li>
+            </ol>
+          </article>
+        </section>
+
+        <section class="view" id="view-compose">
+          <div class="page-heading">
+            <p class="eyebrow">SEND A MESSAGE</p>
+            <h2>Compose email</h2>
+          </div>
+          <form id="compose-form" class="card form-grid">
+            <label>From
+              <input id="compose-sender" readonly>
+            </label>
+            <label>To
+              <select id="compose-recipient" required></select>
+            </label>
+            <label class="full-width">Private-key password
+              <input id="compose-password" type="password" minlength="8" required autocomplete="current-password">
+            </label>
+            <label class="full-width">Subject
+              <input id="compose-subject" maxlength="300" required>
+            </label>
+            <label class="full-width">Message
+              <textarea id="compose-body" rows="7" maxlength="100000" required></textarea>
+            </label>
+            <div class="full-width">
+              <button class="button primary" type="submit">Encrypt, sign, and send</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="view" id="view-inbox">
+          <div class="page-heading">
+            <p class="eyebrow">ENCRYPTED MESSAGES</p>
+            <h2>Inbox</h2>
+            <button id="refresh-inbox" class="button secondary" type="button">
+              Refresh inbox
+            </button>
+          </div>
+          <div id="inbox-list" class="stack"></div>
+          <article id="message-panel" class="card message-panel" hidden>
+            <div class="row spread">
+              <div>
+                <p class="eyebrow">MESSAGE DETAILS</p>
+                <h3 id="message-title">Message</h3>
+              </div>
+              <button id="close-message" class="button secondary" type="button">Close</button>
+            </div>
+            <p id="message-meta" class="muted"></p>
+            <div class="status-grid">
+              <div><span>Signature</span><strong id="signature-status">Not checked</strong></div>
+              <div><span>Sender trust</span><strong id="trust-status">Unknown</strong></div>
+              <div><span>Decryption</span><strong id="decryption-status">Not attempted</strong></div>
+            </div>
+            <button id="verify-message" class="button secondary" type="button">
+              Verify signature
+            </button>
+            <form id="decrypt-form" class="inline-form">
+              <label>Private-key password
+                <input id="decrypt-password" type="password" minlength="8" required autocomplete="current-password">
+              </label>
+              <button class="button primary" type="submit">Decrypt message</button>
+            </form>
+            <article id="plaintext-panel" class="plaintext" hidden>
+              <h4 id="plaintext-subject"></h4>
+              <pre id="plaintext-body"></pre>
+            </article>
+          </article>
+        </section>
+
+        <section class="view" id="view-keys">
+          <div class="page-heading">
+            <p class="eyebrow">RSA-3072 KEY PAIR</p>
+            <h2>Key management</h2>
+          </div>
+          <article class="card">
+            <h3>Generate keys for your account</h3>
+            <form id="key-form" class="inline-form">
+              <label>Private-key password
+                <input id="key-password" type="password" minlength="8" required autocomplete="new-password">
+              </label>
+              <button class="button primary" type="submit">Generate key pair</button>
+            </form>
+            <p class="muted">The private key is encrypted at rest and is never returned by the API.</p>
+          </article>
+          <article class="card">
+            <h3>Public key</h3>
+            <p id="key-fingerprint" class="fingerprint">No key loaded</p>
+            <a id="export-key" class="button secondary" href="#">Download public key</a>
+          </article>
+        </section>
+
+        <section class="view" id="view-contacts">
+          <div class="page-heading">
+            <p class="eyebrow">KEY EXCHANGE AND TRUST</p>
+            <h2>Contacts and trust</h2>
+          </div>
+          <article class="card">
+            <h3>Import a contact public key</h3>
+            <form id="contact-form" class="form-grid">
+              <label>Contact
+                <select id="contact-id" required></select>
+              </label>
+              <label>Display name
+                <input id="contact-name" maxlength="100" required>
+              </label>
+              <label class="full-width">Public-key PEM
+                <textarea id="contact-pem" rows="6" required></textarea>
+              </label>
+              <label class="checkbox-row full-width">
+                <input id="accept-replacement" type="checkbox">
+                I independently compared the new fingerprint and accept a key replacement
+              </label>
+              <button class="button primary" type="submit">Import public key</button>
+            </form>
+            <p class="muted">Imported keys start as unknown. Importing does not establish trust.</p>
+          </article>
+          <article class="card">
+            <h3>Trust records</h3>
+            <div id="contacts-list" class="stack"></div>
+          </article>
+        </section>
+
+        <section class="view" id="view-ca">
+          <div class="page-heading">
+            <p class="eyebrow">LOCAL X.509 DEMONSTRATION</p>
+            <h2>Certificate authority</h2>
+          </div>
+          <article class="card">
+            <h3>Initialize certificate authority</h3>
+            <form id="ca-init-form" class="inline-form">
+              <label>CA private-key password
+                <input id="ca-password" type="password" minlength="8" required autocomplete="new-password">
+              </label>
+              <button class="button primary" type="submit">Initialize CA</button>
+            </form>
+          </article>
+          <article class="card">
+            <h3>Issue certificate for your account</h3>
+            <form id="ca-issue-form" class="inline-form">
+              <label>CA private-key password
+                <input id="ca-issue-password" type="password" minlength="8" required autocomplete="current-password">
+              </label>
+              <button class="button secondary" type="submit">Issue certificate</button>
+            </form>
+            <label class="certificate-input">Certificate PEM
+              <textarea id="certificate-pem" rows="8"></textarea>
+            </label>
+            <button id="validate-certificate" class="button secondary" type="button">
+              Validate certificate
+            </button>
+            <pre id="certificate-result" class="result-box"></pre>
+          </article>
+        </section>
+
+        <section class="view" id="view-lab">
+          <div class="page-heading">
+            <p class="eyebrow">SECURITY TESTS</p>
+            <h2>Security lab</h2>
+            <p>Tampering is tested on a copy. The saved inbox package stays unchanged.</p>
+          </div>
+          <article class="card">
+            <h3>Test tamper detection</h3>
+            <form id="tamper-form" class="inline-form">
+              <label>Message ID
+                <input id="tamper-message-id" required>
+              </label>
+              <label>Field
+                <select id="tamper-field">
+                  <option value="ciphertext_and_tag">Ciphertext and GCM tag</option>
+                  <option value="subject">Signed package metadata</option>
+                </select>
+              </label>
+              <button class="button primary" type="submit">Run tamper test</button>
+            </form>
+            <pre id="tamper-result" class="result-box"></pre>
+          </article>
+        </section>
+
+        <section class="view" id="view-about">
+          <div class="page-heading">
+            <p class="eyebrow">SECURITY INFORMATION</p>
+            <h2>About and security</h2>
+          </div>
+          <article class="card">
+            <h3>Security notes</h3>
+            <p>A valid signature shows that a message verifies under a particular public key. It does not prove the real-world identity of the person using that key. Trust is a separate user decision.</p>
+            <p>Private-key passwords protect key files at rest. They do not protect an unlocked key or a compromised computer.</p>
+            <p>The accounts and storage in this project are intended for local use. Do not use these demo credentials for other services.</p>
+          </article>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="./js/app.js"></script>
+</body>
+</html>
